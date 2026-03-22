@@ -1,0 +1,972 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>חדר בריחה: מבצע אפיקומן (עבודת פרך)</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- MathJax -->
+    <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;700;900&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Heebo', sans-serif;
+            color: #f8fafc;
+            min-height: 100vh;
+            overflow-x: hidden;
+            touch-action: manipulation;
+        }
+        
+        #bg-layer {
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+            background-size: cover; background-position: center; z-index: -2; transition: background-image 1.5s ease-in-out;
+        }
+
+        .overlay {
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+            background: linear-gradient(to bottom, rgba(15, 23, 42, 0.85), rgba(2, 6, 23, 0.98)); z-index: -1;
+        }
+        
+        .glass-card {
+            background: rgba(15, 23, 42, 0.7); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.1); box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+        }
+
+        .fade-in { animation: fadeIn 0.8s ease-in-out forwards; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(20px) scale(0.98); } to { opacity: 1; transform: translateY(0) scale(1); } }
+        
+        .shake { animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both; }
+        @keyframes shake {
+            10%, 90% { transform: translate3d(-1px, 0, 0); }
+            20%, 80% { transform: translate3d(2px, 0, 0); }
+            30%, 50%, 70% { transform: translate3d(-4px, 0, 0); }
+            40%, 60% { transform: translate3d(4px, 0, 0); }
+        }
+
+        .input-math {
+            background: rgba(2, 6, 23, 0.8); border: 2px solid #475569; color: #fbbf24;
+            text-align: center; font-size: 1.25rem; font-weight: bold; transition: all 0.3s ease;
+            letter-spacing: 2px; cursor: pointer; width: 100%;
+        }
+        
+        .active-input { border-color: #eab308 !important; box-shadow: 0 0 15px rgba(234, 179, 8, 0.6) !important; background: rgba(15, 23, 42, 0.9); transform: scale(1.05); }
+        .active-input.purple-theme { border-color: #d946ef !important; box-shadow: 0 0 15px rgba(217, 70, 239, 0.6) !important; }
+
+        .input-correct { border-color: #22c55e !important; color: #4ade80 !important; background: rgba(20, 83, 45, 0.4) !important; box-shadow: 0 0 10px rgba(34, 197, 94, 0.4) !important; cursor: not-allowed !important; pointer-events: none; }
+        .input-wrong { border-color: #ef4444 !important; color: #f87171 !important; background: rgba(127, 29, 29, 0.4) !important; }
+
+        .pharaoh-note { background: rgba(127, 29, 29, 0.2); border-right: 4px solid #ef4444; padding: 1rem; margin-top: 1rem; border-radius: 8px; font-style: italic; color: #fca5a5; }
+
+        .question-box { background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 1.5rem; margin-bottom: 1.5rem; position: relative; z-index: 10; }
+
+        .stage-icon-box {
+            display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center;
+            padding: 1rem; background: rgba(15, 23, 42, 0.5); border-radius: 16px; border: 1px solid rgba(255, 255, 255, 0.1); transition: all 0.3s;
+        }
+        .stage-icon-box:hover { transform: translateY(-5px); border-color: #eab308; box-shadow: 0 10px 20px rgba(0,0,0,0.3); }
+
+        /* KEYBOARD */
+        .shmura-matzah {
+            width: 260px; padding-bottom: 20px; background-color: #d4a373;
+            background-image: radial-gradient(circle, #b07d47 15%, transparent 20%), radial-gradient(circle, #b07d47 15%, transparent 20%);
+            background-size: 30px 30px; background-position: 0 0, 15px 15px; border-radius: 48% 52% 49% 51% / 51% 48% 52% 49%;
+            box-shadow: inset 0 0 20px rgba(139, 69, 19, 0.6), 0 15px 25px rgba(0,0,0,0.6); border: 4px solid #8b5a2b;
+            display: flex; align-items: center; justify-content: center; position: fixed; z-index: 100; opacity: 0; pointer-events: none;
+            transition: opacity 0.3s ease; animation: float 6s ease-in-out infinite; cursor: grab; flex-direction: column;
+        }
+        .shmura-matzah:active { cursor: grabbing; }
+        .shmura-matzah.visible { opacity: 1; pointer-events: auto; }
+        @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+
+        .drag-handle { width: 50px; height: 6px; background: rgba(90, 40, 10, 0.4); border-radius: 10px; margin-top: 15px; margin-bottom: 10px; }
+        .matzah-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; padding: 0 20px; }
+        .matzah-btn { background: #faedcd; border: 2px solid #a37233; color: #4a2e12; font-size: 1.4rem; font-weight: 900; border-radius: 50%; width: 52px; height: 52px; display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 4px 0 #8b5a2b, 0 5px 10px rgba(0,0,0,0.3); user-select: none; }
+        .matzah-btn:active { transform: translateY(4px); box-shadow: 0 0 0 #8b5a2b, 0 2px 5px rgba(0,0,0,0.3); background: #e6ccb2; }
+        .matzah-btn.action-btn { background: #d97706; color: white; border-color: #92400e; box-shadow: 0 4px 0 #92400e; }
+        .matzah-btn.action-btn:active { box-shadow: 0 0 0 #92400e; }
+        .matzah-btn.enter-btn { grid-column: span 3; width: 100%; border-radius: 15px; background: #16a34a; border-color: #14532d; box-shadow: 0 4px 0 #14532d; height: 45px; }
+        .matzah-btn.enter-btn:active { box-shadow: 0 0 0 #14532d; background: #15803d; }
+
+        .btn-locked { filter: grayscale(1); opacity: 0.5; pointer-events: none; }
+    </style>
+</head>
+<body class="flex flex-col items-center p-4 sm:p-6 pb-[350px]">
+
+    <div id="bg-layer"></div>
+    <div class="overlay"></div>
+
+    <header id="mainHeader" class="hidden w-full max-w-5xl flex justify-between items-center py-4 border-b border-slate-700/50 mb-6 text-yellow-500 glass-card px-6 rounded-2xl relative z-20">
+        <div class="text-xl sm:text-2xl font-bold flex items-center gap-2 drop-shadow-md">
+            <span>⏳</span><span id="timerDisplay" class="font-mono">45:00</span>
+        </div>
+        <div class="text-2xl sm:text-3xl font-black tracking-wider text-center flex-1 text-transparent bg-clip-text bg-gradient-to-r from-yellow-300 to-yellow-600 hidden sm:block">
+            מבצע אפיקומן
+        </div>
+        <div class="text-lg sm:text-xl font-medium bg-slate-900/50 px-4 py-1 rounded-full border border-slate-600">
+            <span id="stageDisplay" class="text-white font-bold">הקדמה</span>
+        </div>
+    </header>
+
+    <main class="w-full max-w-5xl glass-card p-4 sm:p-10 rounded-3xl relative overflow-hidden transition-all duration-500 z-10">
+        
+        <div id="toastAlert" class="absolute top-6 left-1/2 transform -translate-x-1/2 bg-slate-800/95 backdrop-blur-sm text-white px-6 py-3 rounded-full font-bold shadow-2xl opacity-0 transition-opacity duration-300 pointer-events-none z-50 border flex items-center gap-2">
+            <span id="toastIcon">⚠️</span><span id="toastText">הודעה</span>
+        </div>
+        
+        <!-- 0. INTRO SCREEN -->
+        <div id="intro" class="room-content fade-in text-center relative z-10">
+            <h1 class="text-5xl sm:text-6xl font-black text-yellow-400 mb-4 drop-shadow-xl">
+                מבצע אפיקומן: עבודת פרך
+            </h1>
+            <p class="text-xl text-slate-300 mb-8 font-light max-w-2xl mx-auto leading-relaxed">
+                ברוכים הבאים למצרים! אני רעמסס, פרעה של המספרים. 
+                החבאתי את האפיקומן מאחורי 4 דלתות נעולות מתמטית.
+                כדי לצאת מעבדות לחירות, תצטרכו להוכיח ידע ב-5 יח"ל ולשרוד את חידות ההעשרה בדרך.
+            </p>
+
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-10 text-right">
+                <div class="stage-icon-box"><span class="text-4xl mb-3">🐪</span><h3 class="font-bold text-yellow-400">חדר 1</h3></div>
+                <div class="stage-icon-box"><span class="text-4xl mb-3">🌊</span><h3 class="font-bold text-blue-400">חדר 2</h3></div>
+                <div class="stage-icon-box"><span class="text-4xl mb-3">🌋</span><h3 class="font-bold text-orange-400">חדר 3</h3></div>
+                <div class="stage-icon-box"><span class="text-4xl mb-3">🛕</span><h3 class="font-bold text-emerald-400">חדר 4</h3></div>
+            </div>
+
+            <div class="pharaoh-note mx-auto max-w-lg mb-8 text-right">
+                "רמזים? רק אם תטעו בתשובה! <strong>כל טעות תעלה לכם בדקה שלמה</strong> מהזמן, אבל בתמורה תקבלו רמז מדויק לאותו הסעיף.<br>
+                הקלידו תשובה ולחצו <strong>ENTER</strong> לבדיקה! 🐪"
+            </div>
+            <button onclick="startGame()" class="bg-gradient-to-r from-yellow-600 to-yellow-500 hover:from-yellow-500 text-slate-900 font-black text-2xl py-4 px-12 rounded-full transition-all transform hover:scale-105 shadow-[0_0_30px_rgba(234,179,8,0.5)]">
+                שחרר את עמי (התחל משחק)
+            </button>
+        </div>
+
+        <p id="helperText" class="hidden text-center text-slate-400 mb-6 text-sm bg-slate-800/50 inline-block px-4 py-2 rounded-full mx-auto w-full max-w-sm border border-slate-700 relative z-10">
+            👆 לחצו על תיבה להקלדה, ולאחר מכן לחצו ENTER לבדיקה
+        </p>
+
+        <!-- ========================================================= -->
+        <!-- 1. ROOM 1 (Complex) -->
+        <!-- ========================================================= -->
+        <div id="room1" class="room-content hidden relative z-10">
+            <div class="flex items-center justify-center gap-4 mb-6">
+                <span class="text-4xl">🏜️</span>
+                <h2 class="text-3xl font-black text-yellow-400 text-center drop-shadow-lg">חדר 1: מדבר המרוכבים (40 שנה)</h2>
+                <span class="text-4xl">🐪</span>
+            </div>
+            
+            <div class="question-box border-yellow-500/50">
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div class="bg-slate-900/60 p-4 rounded-xl border border-slate-700 flex flex-col justify-between" dir="rtl">
+                        <div>
+                            <h3 class="text-yellow-500 font-bold mb-2">סעיף א' - כיוונים במדבר</h3>
+                            <p class="text-slate-300 text-sm mb-3">
+                                נתון המספר המרוכב: \( Z_1 = -cis(76^\circ) \).<br>
+                                קבעו עבור הטענות האם הן נכונות (<span class="text-green-400">1</span>) או שגויות (<span class="text-red-400">0</span>):<br>
+                                I. \( Z_1 \) נמצא ברביע הרביעי.<br>
+                                II. \( Z_1 \) נמצא על מעגל קנוני שרדיוסו 1.
+                            </p>
+                        </div>
+                        <div>
+                            <div class="flex items-center gap-3 mt-2">
+                                <span class="text-xs text-slate-400">קוד (2 ספרות):</span>
+                                <input type="text" id="ans1_a" readonly onclick="setActiveInput('ans1_a')" class="input-math rounded-lg p-1" placeholder="?">
+                            </div>
+                            <div id="hint_ans1_a" class="hidden mt-3 p-3 bg-red-900/30 border-r-4 border-red-500 text-red-200 text-sm font-bold rounded-lg shadow-inner">
+                                💡 רמז: המספר המרוכב המקורי ברביע הראשון. הכפלה במינוס שקולה לסיבוב של 180 מעלות.
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-slate-900/60 p-4 rounded-xl border border-slate-700 flex flex-col justify-between" dir="rtl">
+                        <div>
+                            <h3 class="text-yellow-500 font-bold mb-2">סעיף ב' - צורות בחול</h3>
+                            <p class="text-slate-300 text-sm mb-3">
+                                נתונה המשוואה: \( (Z \cdot i^7)^4 + 3(Z \cdot i)^2 + 4i^2 = 0 \).<br>
+                                ארבעת הפתרונות של המשוואה יוצרים מרובע במישור גאוס.<br>
+                                מהו שטח המרובע?
+                            </p>
+                        </div>
+                        <div>
+                            <div class="flex items-center gap-3 mt-2">
+                                <span class="text-xs text-slate-400">שטח:</span>
+                                <input type="text" id="ans1_b" readonly onclick="setActiveInput('ans1_b')" class="input-math rounded-lg p-1" placeholder="?">
+                            </div>
+                            <div id="hint_ans1_b" class="hidden mt-3 p-3 bg-red-900/30 border-r-4 border-red-500 text-red-200 text-sm font-bold rounded-lg shadow-inner">
+                                💡 רמז: סמנו \( w = (Z \cdot -i)^2 \) ופתרו כמשוואה ריבועית. מתקבל מעוין שאלכסוניו 4 ו-2.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-4 bg-yellow-900/30 p-4 rounded-xl border border-yellow-700 flex flex-col justify-between gap-4" dir="rtl">
+                    <div class="flex flex-col sm:flex-row justify-between items-center gap-4">
+                        <div>
+                            <h3 class="text-yellow-400 font-bold">חידת העשרה מפרעה:</h3>
+                            <p class="text-sm text-yellow-200">כדי לצאת מהמדבר: כמה כוסות יין שותים בני ישראל בליל הסדר?</p>
+                        </div>
+                        <div class="w-24">
+                            <input type="text" id="ans1_c" readonly onclick="setActiveInput('ans1_c')" class="input-math rounded-lg p-1 !border-yellow-500" placeholder="?">
+                        </div>
+                    </div>
+                    <div id="hint_ans1_c" class="hidden w-full mt-2 p-3 bg-red-900/30 border-r-4 border-red-500 text-red-200 text-sm font-bold rounded-lg shadow-inner">
+                        💡 רמז: נהוג לשתות כוסות כנגד "ארבע לשונות של גאולה".
+                    </div>
+                </div>
+            </div>
+            
+            <div class="flex justify-center mt-6">
+                <button id="btn_next_room1" onclick="advanceFlow()" class="btn-locked bg-yellow-600 hover:bg-yellow-500 text-white font-black text-xl py-3 px-10 rounded-xl transition-all w-full sm:w-auto z-10 relative">
+                    🔒 נעול (פתרו הכל קודם)
+                </button>
+            </div>
+        </div>
+
+        <!-- TRANSITION 1 -->
+        <div id="trans1" class="room-content hidden relative z-10">
+            <div class="flex items-center justify-center gap-4 mb-4">
+                <span class="text-4xl">💡</span>
+                <h2 class="text-3xl sm:text-4xl font-black text-fuchsia-400 text-center drop-shadow-lg">תחנת מעבר: ידע כללי</h2>
+                <span class="text-4xl">🧠</span>
+            </div>
+            
+            <div class="bg-black/50 border border-fuchsia-500/30 rounded-xl p-4 mb-6">
+                <p class="text-xl text-center text-fuchsia-300 font-bold leading-relaxed">
+                    צפו בסרטון וגלו: מה התוצאה של "הנוסחה היפה בעולם"?
+                </p>
+                <p class="text-sm text-center text-slate-400 mt-1">
+                    (לא מצליחים לראות? היכנסו ליוטיוב וחפשו Euler's Identity)
+                </p>
+            </div>
+
+            <div class="flex justify-center mb-8">
+                <div class="relative w-[240px] h-[426px] sm:w-[280px] sm:h-[497px] rounded-2xl overflow-hidden border-2 border-fuchsia-500/50 shadow-[0_0_20px_rgba(217,70,239,0.3)] bg-slate-900">
+                    <iframe class="absolute top-0 left-0 w-full h-full" 
+                            src="https://www.youtube.com/embed/Q8bkruaAL4A?rel=0" 
+                            title="YouTube Shorts - Euler's Identity" frameborder="0" 
+                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen>
+                    </iframe>
+                </div>
+            </div>
+
+            <div class="question-box relative !border-fuchsia-500/50" dir="ltr">
+                <div class="text-3xl mb-4 mt-2 text-center bg-black/40 py-6 rounded-lg border border-slate-700 text-fuchsia-300 font-serif">
+                    \( e^{i\pi} + 1 = ? \)
+                </div>
+                <div class="flex flex-col sm:flex-row items-center justify-end gap-4 mt-6">
+                    <p class="text-right text-fuchsia-400 font-bold" dir="rtl">מה התוצאה של הנוסחה (ראו סרטון)?</p>
+                    <input type="text" id="trans1_ans" readonly onclick="setActiveInput('trans1_ans', 'purple')" class="input-math !text-fuchsia-400 focus:!border-fuchsia-500 rounded-xl w-24 p-2 shadow-lg" placeholder="?">
+                </div>
+                
+                <div id="hint_trans1_ans" class="hidden mt-4 p-3 bg-red-900/30 border-r-4 border-red-500 text-red-200 text-sm font-bold text-right rounded-lg shadow-inner" dir="rtl">
+                    💡 רמז: הנוסחה מבוססת על כך ש-\(cis(\pi) = -1\). אז הפונקציה שווה ל-1- ועוד 1... כמה זה יוצא?
+                </div>
+            </div>
+            <div class="flex justify-center mt-6">
+                <button id="btn_next_trans1" onclick="advanceFlow()" class="btn-locked bg-gradient-to-r from-fuchsia-600 to-fuchsia-500 text-white font-black text-xl py-4 px-10 rounded-xl transition-all w-full sm:w-auto">
+                    🔒 נעול
+                </button>
+            </div>
+        </div>
+
+        <!-- ========================================================= -->
+        <!-- 2. ROOM 2 (Analytic Geometry) -->
+        <!-- ========================================================= -->
+        <div id="room2" class="room-content hidden relative z-10">
+            <div class="flex items-center justify-center gap-4 mb-6">
+                <span class="text-4xl">🌊</span>
+                <h2 class="text-3xl font-black text-blue-400 text-center drop-shadow-lg">חדר 2: קריעת ים האנליטית</h2>
+                <span class="text-4xl">📜</span>
+            </div>
+            
+            <div class="question-box border-blue-500/50">
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div class="bg-slate-900/60 p-4 rounded-xl border border-slate-700 flex flex-col justify-between" dir="rtl">
+                        <div>
+                            <h3 class="text-blue-400 font-bold mb-2">סעיף א' - עומק המים</h3>
+                            <p class="text-slate-300 text-sm mb-3">
+                                מעגל שמרכזו בנקודה \( (10,0) \) משיק ברביע הראשון לפרבולה \( y^2 = 12x \).<br>
+                                מהו ריבוע הרדיוס של המעגל? (\( R^2 \))
+                            </p>
+                        </div>
+                        <div>
+                            <div class="flex items-center gap-3 mt-2">
+                                <span class="text-xs text-slate-400">\( R^2 \):</span>
+                                <input type="text" id="ans2_a" readonly onclick="setActiveInput('ans2_a')" class="input-math rounded-lg p-1 focus:!border-blue-500" placeholder="?">
+                            </div>
+                            <div id="hint_ans2_a" class="hidden mt-3 p-3 bg-red-900/30 border-r-4 border-red-500 text-red-200 text-sm font-bold rounded-lg shadow-inner">
+                                💡 רמז: שיפוע המשיק לפרבולה כפול שיפוע הרדיוס (מהמרכז לנקודה) שווה למינוס 1. היעזרו ב-\( m = p/y_0 \).
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-slate-900/60 p-4 rounded-xl border border-slate-700 flex flex-col justify-between" dir="rtl">
+                        <div>
+                            <h3 class="text-blue-400 font-bold mb-2">סעיף ב' - נקודת החציה</h3>
+                            <p class="text-slate-300 text-sm mb-3">
+                                בהמשך לנתוני סעיף א', מצאו את שיעור ה-x של נקודת ההשקה בין המעגל לפרבולה.
+                            </p>
+                        </div>
+                        <div>
+                            <div class="flex items-center gap-3 mt-2">
+                                <span class="text-xs text-slate-400">שיעור x:</span>
+                                <input type="text" id="ans2_b" readonly onclick="setActiveInput('ans2_b')" class="input-math rounded-lg p-1 focus:!border-blue-500" placeholder="?">
+                            </div>
+                            <div id="hint_ans2_b" class="hidden mt-3 p-3 bg-red-900/30 border-r-4 border-red-500 text-red-200 text-sm font-bold rounded-lg shadow-inner">
+                                💡 רמז: השוו את שיפוע הרדיוס למינוס ההופכי של שיפוע המשיק, פתרו ומצאו את x.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-4 bg-blue-900/30 p-4 rounded-xl border border-blue-700 flex flex-col justify-between gap-4" dir="rtl">
+                    <div class="flex flex-col sm:flex-row justify-between items-center gap-4">
+                        <div>
+                            <h3 class="text-blue-300 font-bold">חידת העשרה מפרעה:</h3>
+                            <p class="text-sm text-blue-200">קריעת ים סוף זה מרשים, אבל לכמה חלקים חוצים את המצה האמצעית ביחץ?</p>
+                        </div>
+                        <div class="w-24">
+                            <input type="text" id="ans2_c" readonly onclick="setActiveInput('ans2_c')" class="input-math rounded-lg p-1 !border-blue-500" placeholder="?">
+                        </div>
+                    </div>
+                    <div id="hint_ans2_c" class="hidden w-full mt-2 p-3 bg-red-900/30 border-r-4 border-red-500 text-red-200 text-sm font-bold rounded-lg shadow-inner">
+                        💡 רמז: "יחץ" - בוצעים את המצה. לשני חצאים כמובן.
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex justify-center mt-6">
+                <button id="btn_next_room2" onclick="advanceFlow()" class="btn-locked bg-blue-600 hover:bg-blue-500 text-white font-black text-xl py-3 px-10 rounded-xl transition-all w-full sm:w-auto z-10 relative">
+                    🔒 נעול
+                </button>
+            </div>
+        </div>
+
+        <!-- TRANSITION 2 -->
+        <div id="trans2" class="room-content hidden relative z-10">
+            <div class="flex items-center justify-center gap-4 mb-6">
+                <span class="text-4xl">💡</span>
+                <h2 class="text-3xl sm:text-4xl font-black text-fuchsia-400 text-center drop-shadow-lg">תחנת מעבר: ידע כללי</h2>
+                <span class="text-4xl">🚀</span>
+            </div>
+            <p class="text-xl text-center text-slate-200 mb-8 leading-relaxed">
+                המסלול של גלי הים, כמו המסלול של מזרקות מים או זריקת כדור, יוצר צורה של <strong>פרבולה</strong>.
+            </p>
+            <div class="question-box relative !border-fuchsia-500/50" dir="rtl">
+                <p class="text-right text-slate-300 mb-6 text-lg">
+                    מי היה המתמטיקאי היווני שכתב את הספר המפורסם "חתכי חרוט" וניתח את צורת הפרבולה לעומק לראשונה?
+                </p>
+                <ul class="list-none space-y-4 mb-8">
+                    <li class="bg-black/30 p-3 rounded-lg border border-slate-700"><span class="text-fuchsia-400 font-bold ml-2">1.</span> פיתגורס</li>
+                    <li class="bg-black/30 p-3 rounded-lg border border-slate-700"><span class="text-fuchsia-400 font-bold ml-2">2.</span> אפולוניוס מפרגה</li>
+                    <li class="bg-black/30 p-3 rounded-lg border border-slate-700"><span class="text-fuchsia-400 font-bold ml-2">3.</span> אוקלידס</li>
+                </ul>
+                <div class="flex flex-col sm:flex-row items-center justify-end gap-4">
+                    <p class="text-right text-fuchsia-400 font-bold">הקלידו את מספר התשובה:</p>
+                    <input type="text" id="trans2_ans" readonly onclick="setActiveInput('trans2_ans', 'purple')" class="input-math !text-fuchsia-400 focus:!border-fuchsia-500 rounded-xl w-24 p-2 shadow-lg" placeholder="?">
+                </div>
+                
+                <div id="hint_trans2_ans" class="hidden mt-4 p-3 bg-red-900/30 border-r-4 border-red-500 text-red-200 text-sm font-bold text-right rounded-lg shadow-inner" dir="rtl">
+                    💡 רמז: לא פיתגורס ולא אוקלידס... השם שלו מתחיל באות א' והוא מהעיר פרגה!
+                </div>
+            </div>
+            <div class="flex justify-center mt-6">
+                <button id="btn_next_trans2" onclick="advanceFlow()" class="btn-locked bg-gradient-to-r from-fuchsia-600 to-fuchsia-500 text-white font-black text-xl py-4 px-10 rounded-xl transition-all w-full sm:w-auto">
+                    🔒 נעול
+                </button>
+            </div>
+        </div>
+
+        <!-- ========================================================= -->
+        <!-- 3. ROOM 3 (Exponential & Integrals) -->
+        <!-- ========================================================= -->
+        <div id="room3" class="room-content hidden relative z-10">
+            <div class="flex items-center justify-center gap-4 mb-6">
+                <span class="text-4xl">⛰️</span>
+                <h2 class="text-3xl font-black text-orange-400 text-center drop-shadow-lg">חדר 3: הר סיני של האקספוננט</h2>
+                <span class="text-4xl">📈</span>
+            </div>
+            
+            <div class="question-box border-orange-500/50">
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div class="bg-slate-900/60 p-4 rounded-xl border border-slate-700 flex flex-col justify-between" dir="rtl">
+                        <div>
+                            <h3 class="text-orange-400 font-bold mb-2">סעיף א' - שטח בשיפוע</h3>
+                            <p class="text-slate-300 text-sm mb-3">
+                                נתונה הפונקציה \( f(x) = 4e^{2x} \).<br>
+                                חשבו את השטח הכלוא בין גרף הפונקציה, ציר ה-x, ציר ה-y, והישר \( x = \ln(3) \).
+                            </p>
+                        </div>
+                        <div>
+                            <div class="flex items-center gap-3 mt-2">
+                                <span class="text-xs text-slate-400">שטח S:</span>
+                                <input type="text" id="ans3_a" readonly onclick="setActiveInput('ans3_a')" class="input-math rounded-lg p-1 focus:!border-orange-500" placeholder="?">
+                            </div>
+                            <div id="hint_ans3_a" class="hidden mt-3 p-3 bg-red-900/30 border-r-4 border-red-500 text-red-200 text-sm font-bold rounded-lg shadow-inner">
+                                💡 רמז: האינטגרל של הפונקציה הוא \( 2e^{2x} \). אל תשכחו ש- \( e^{2\ln(3)} = 3^2 = 9 \).
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-slate-900/60 p-4 rounded-xl border border-slate-700 flex flex-col justify-between" dir="rtl">
+                        <div>
+                            <h3 class="text-orange-400 font-bold mb-2">סעיף ב' - ירידה לתהום</h3>
+                            <p class="text-slate-300 text-sm mb-3">
+                                נתונה: \( g(x) = \frac{e^{2x+1} - e^{2x} + 1}{e^{2x} + 1} \).<br>
+                                מהי האסימפטוטה האופקית שלה כאשר \( x \to -\infty \)? (הקלידו ערך y).
+                            </p>
+                        </div>
+                        <div>
+                            <div class="flex items-center gap-3 mt-2">
+                                <span class="text-xs text-slate-400">ערך y:</span>
+                                <input type="text" id="ans3_b" readonly onclick="setActiveInput('ans3_b')" class="input-math rounded-lg p-1 focus:!border-orange-500" placeholder="?">
+                            </div>
+                            <div id="hint_ans3_b" class="hidden mt-3 p-3 bg-red-900/30 border-r-4 border-red-500 text-red-200 text-sm font-bold rounded-lg shadow-inner">
+                                💡 רמז: כאשר x שואף למינוס אינסוף, איבר ה-\( e^{2x} \) שואף לאפס. הציבו זאת במשוואה ותראו מה נשאר.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-4 bg-orange-900/30 p-4 rounded-xl border border-orange-700 flex flex-col justify-between gap-4" dir="rtl">
+                    <div class="flex flex-col sm:flex-row justify-between items-center gap-4">
+                        <div>
+                            <h3 class="text-orange-300 font-bold">חידת העשרה מפרעה:</h3>
+                            <p class="text-sm text-orange-200">כמה לוחות ברית קיבל משה כפול מספר הדיברות שמופיעות עליהן?</p>
+                        </div>
+                        <div class="w-24">
+                            <input type="text" id="ans3_c" readonly onclick="setActiveInput('ans3_c')" class="input-math rounded-lg p-1 !border-orange-500" placeholder="?">
+                        </div>
+                    </div>
+                    <div id="hint_ans3_c" class="hidden w-full mt-2 p-3 bg-red-900/30 border-r-4 border-red-500 text-red-200 text-sm font-bold rounded-lg shadow-inner">
+                        💡 רמז: משה קיבל 2 לוחות ברית. על לוחות הברית יש סך הכל עשר דיברות (5 בכל לוח). מה המכפלה של 2 ב-10?
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex justify-center mt-6">
+                <button id="btn_next_room3" onclick="advanceFlow()" class="btn-locked bg-orange-600 hover:bg-orange-500 text-white font-black text-xl py-3 px-10 rounded-xl transition-all w-full sm:w-auto z-10 relative">
+                    🔒 נעול
+                </button>
+            </div>
+        </div>
+
+        <!-- TRANSITION 3 -->
+        <div id="trans3" class="room-content hidden relative z-10">
+            <div class="flex items-center justify-center gap-4 mb-6">
+                <span class="text-4xl">💡</span>
+                <h2 class="text-3xl sm:text-4xl font-black text-fuchsia-400 text-center drop-shadow-lg">תחנת מעבר: ידע כללי</h2>
+                <span class="text-4xl">📈</span>
+            </div>
+            <p class="text-xl text-center text-slate-200 mb-8 leading-relaxed">
+                רעידת האדמה שהרגע עברתם נמדדת בעוצמה סיסמית לפי <strong>סולם לוגריתמי</strong>. כל קפיצה של יחידה, משמעותה גידול עצום בעוצמה פי 10.
+            </p>
+            <div class="question-box relative !border-fuchsia-500/50" dir="rtl">
+                <p class="text-right text-slate-300 mb-6 text-lg">
+                    איך נקרא הסולם המפורסם המשמש למדידת עוצמתן של רעידות אדמה?
+                </p>
+                <ul class="list-none space-y-4 mb-8">
+                    <li class="bg-black/30 p-3 rounded-lg border border-slate-700"><span class="text-fuchsia-400 font-bold ml-2">1.</span> סולם קלווין</li>
+                    <li class="bg-black/30 p-3 rounded-lg border border-slate-700"><span class="text-fuchsia-400 font-bold ml-2">2.</span> סולם ריכטר</li>
+                    <li class="bg-black/30 p-3 rounded-lg border border-slate-700"><span class="text-fuchsia-400 font-bold ml-2">3.</span> סולם בופור</li>
+                </ul>
+                <div class="flex flex-col sm:flex-row items-center justify-end gap-4">
+                    <p class="text-right text-fuchsia-400 font-bold">הקלידו את מספר התשובה:</p>
+                    <input type="text" id="trans3_ans" readonly onclick="setActiveInput('trans3_ans', 'purple')" class="input-math !text-fuchsia-400 focus:!border-fuchsia-500 rounded-xl w-24 p-2 shadow-lg" placeholder="?">
+                </div>
+                
+                <div id="hint_trans3_ans" class="hidden mt-4 p-3 bg-red-900/30 border-r-4 border-red-500 text-red-200 text-sm font-bold text-right rounded-lg shadow-inner" dir="rtl">
+                    💡 רמז: הסולם קרוי על שם צ'ארלס פרנסיס... והוא מופיע בתשובה מספר 2.
+                </div>
+            </div>
+            <div class="flex justify-center mt-6">
+                <button id="btn_next_trans3" onclick="advanceFlow()" class="btn-locked bg-gradient-to-r from-fuchsia-600 to-fuchsia-500 text-white font-black text-xl py-4 px-10 rounded-xl transition-all w-full sm:w-auto">
+                    🔒 נעול
+                </button>
+            </div>
+        </div>
+
+        <!-- ========================================================= -->
+        <!-- 4. ROOM 4 (Logarithmic) -->
+        <!-- ========================================================= -->
+        <div id="room4" class="room-content hidden relative z-10">
+            <div class="flex items-center justify-center gap-4 mb-6">
+                <span class="text-4xl">🛕</span>
+                <h2 class="text-3xl font-black text-emerald-400 text-center drop-shadow-lg">חדר 4: כספת הפירמידה</h2>
+                <span class="text-4xl">🐸</span>
+            </div>
+            
+            <div class="question-box border-emerald-500/50">
+                <div class="text-center bg-black/40 py-2 rounded-lg border border-emerald-800 text-emerald-300 mb-4 text-xl" dir="ltr">
+                    \( h(x) = \frac{\ln(x)}{\ln(x) - x^2} \)
+                </div>
+
+                <div class="grid grid-cols-1 gap-6 mb-6">
+                    <div class="bg-slate-900/60 p-4 rounded-xl border border-slate-700 w-full" dir="rtl">
+                        <h3 class="text-emerald-400 font-bold mb-4">סעיף א' - זיהוי הגרף</h3>
+                        <p class="text-slate-300 text-sm mb-4">
+                            קבעו איזה מהגרפים שלפניכם הוא הגרף של הפונקציה \( h(x) \):
+                        </p>
+                        
+                        <!-- SVG Graphs replacing the image -->
+                        <div class="bg-slate-800/80 p-4 rounded-xl mb-4 overflow-x-auto">
+                            <svg width="100%" height="160" viewBox="0 0 600 160" xmlns="http://www.w3.org/2000/svg" class="mx-auto block" style="min-width: 500px;">
+                              <!-- Graph III -->
+                              <g transform="translate(80, 80)">
+                                <text x="50" y="-60" fill="#f8fafc" font-size="20" font-weight="bold" text-anchor="middle">III</text>
+                                <line x1="-30" y1="0" x2="130" y2="0" stroke="#94a3b8" stroke-width="2" marker-end="url(#arrow)" />
+                                <line x1="0" y1="50" x2="0" y2="-50" stroke="#94a3b8" stroke-width="2" marker-end="url(#arrow)" />
+                                <path d="M 0 -20 Q 30 -60, 50 -60 T 110 -5" fill="none" stroke="#34d399" stroke-width="3" />
+                                <circle cx="0" cy="-20" r="4" fill="#0f172a" stroke="#34d399" stroke-width="2" />
+                              </g>
+                              <!-- Graph II -->
+                              <g transform="translate(260, 80)">
+                                <text x="50" y="-60" fill="#f8fafc" font-size="20" font-weight="bold" text-anchor="middle">II</text>
+                                <line x1="-30" y1="0" x2="130" y2="0" stroke="#94a3b8" stroke-width="2" marker-end="url(#arrow)" />
+                                <line x1="0" y1="50" x2="0" y2="-50" stroke="#94a3b8" stroke-width="2" marker-end="url(#arrow)" />
+                                <path d="M 0 -20 C 15 -20, 20 40, 50 40 C 80 40, 95 5, 120 2" fill="none" stroke="#34d399" stroke-width="3" />
+                                <circle cx="0" cy="-20" r="4" fill="#0f172a" stroke="#34d399" stroke-width="2" />
+                              </g>
+                              <!-- Graph I -->
+                              <g transform="translate(440, 80)">
+                                <text x="50" y="-60" fill="#f8fafc" font-size="20" font-weight="bold" text-anchor="middle">I</text>
+                                <line x1="-30" y1="0" x2="130" y2="0" stroke="#94a3b8" stroke-width="2" marker-end="url(#arrow)" />
+                                <line x1="0" y1="50" x2="0" y2="-50" stroke="#94a3b8" stroke-width="2" marker-end="url(#arrow)" />
+                                <path d="M 0 0 C 15 -45, 30 -45, 50 0 C 70 45, 90 20, 120 5" fill="none" stroke="#34d399" stroke-width="3" />
+                                <circle cx="0" cy="0" r="4" fill="#0f172a" stroke="#34d399" stroke-width="2" />
+                              </g>
+                              <defs>
+                                <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                                  <path d="M 0 0 L 10 5 L 0 10 z" fill="#94a3b8" />
+                                </marker>
+                              </defs>
+                            </svg>
+                        </div>
+                        
+                        <div class="flex items-center gap-3">
+                            <span class="text-xs text-slate-400">הקלידו 1, 2 או 3:</span>
+                            <input type="text" id="ans4_a" readonly onclick="setActiveInput('ans4_a')" class="input-math rounded-lg p-1 w-24 focus:!border-emerald-500" placeholder="?">
+                        </div>
+                        <div id="hint_ans4_a" class="hidden mt-3 p-3 bg-red-900/30 border-r-4 border-red-500 text-red-200 text-sm font-bold rounded-lg shadow-inner">
+                            💡 רמז: מתי הפונקציה מתאפסת? השוו מונה לאפס: \( \ln(x)=0 \) קורה ב-\( x=1 \). לאיזה גרף יש חיתוך עם ציר x? בנוסף, ב-\( x \to 0 \) הפונקציה שואפת ל-1. הגרף המתאים הוא II.
+                        </div>
+                    </div>
+
+                    <div class="bg-slate-900/60 p-4 rounded-xl border border-slate-700 flex flex-col justify-between" dir="rtl">
+                        <div>
+                            <h3 class="text-emerald-400 font-bold mb-2">סעיף ב' - חיתוך הצפרדע</h3>
+                            <p class="text-slate-300 text-sm mb-3">
+                                כמה נקודות חיתוך יש בין הגרף של \( y = \ln(x) \) לבין הגרף של \( y = x^2 \)?
+                            </p>
+                        </div>
+                        <div>
+                            <div class="flex items-center gap-3 mt-2">
+                                <span class="text-xs text-slate-400">מספר נקודות:</span>
+                                <input type="text" id="ans4_b" readonly onclick="setActiveInput('ans4_b')" class="input-math rounded-lg p-1 focus:!border-emerald-500" placeholder="?">
+                            </div>
+                            <div id="hint_ans4_b" class="hidden mt-3 p-3 bg-red-900/30 border-r-4 border-red-500 text-red-200 text-sm font-bold rounded-lg shadow-inner">
+                                💡 רמז: פולינום ריבועי (\( x^2 \)) עולה מהר הרבה יותר מהלוגריתם. הם לעולם לא נפגשים עבור ערכי x חיובים.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-emerald-900/30 p-4 rounded-xl border border-emerald-700 flex flex-col justify-between gap-4" dir="rtl">
+                    <div class="flex flex-col sm:flex-row justify-between items-center gap-4">
+                        <div>
+                            <h3 class="text-emerald-300 font-bold">חידת העשרה מפרעה:</h3>
+                            <p class="text-sm text-emerald-200">כמה מכות מצרים יש בסך הכל <strong>פחות</strong> מספר האבות (אברהם, יצחק ויעקב)?</p>
+                        </div>
+                        <div class="w-24">
+                            <input type="text" id="ans4_c" readonly onclick="setActiveInput('ans4_c')" class="input-math rounded-lg p-1 !border-emerald-500" placeholder="?">
+                        </div>
+                    </div>
+                    <div id="hint_ans4_c" class="hidden w-full mt-2 p-3 bg-red-900/30 border-r-4 border-red-500 text-red-200 text-sm font-bold rounded-lg shadow-inner">
+                        💡 רמז: יש 10 מכות. יש 3 אבות. כמה זה 10 פחות 3?
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex justify-center mt-6">
+                <button id="btn_next_room4" onclick="advanceFlow()" class="btn-locked bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xl py-3 px-10 rounded-xl transition-all w-full sm:w-auto shadow-[0_0_15px_rgba(16,185,129,0.5)] z-10 relative">
+                    🔒 נעול הפירמידה
+                </button>
+            </div>
+        </div>
+
+        <!-- ========================================================= -->
+        <!-- 5. FINISH SCREEN -->
+        <!-- ========================================================= -->
+        <div id="finish" class="room-content hidden text-center py-8 relative z-10">
+            <div class="text-7xl mb-6 animate-bounce">🍷🫓</div>
+            <h2 class="text-4xl sm:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-b from-yellow-200 to-yellow-500 mb-6 drop-shadow-xl">
+                מצאתם את האפיקומן!
+            </h2>
+            <p class="text-xl sm:text-2xl mb-6 text-slate-200 leading-relaxed max-w-2xl mx-auto">
+                פתרתם את כל הסעיפים, צלחתם את חידות הפסח, ניצחתם את פרעה ויצאתם מעבדות לחירות! ליל הסדר ניצל!
+            </p>
+            
+            <div class="bg-black/50 p-8 rounded-3xl inline-block border-2 border-yellow-500 shadow-[0_0_40px_rgba(234,179,8,0.4)] relative">
+                <p class="text-slate-300 mb-3 text-lg">הזמן שנותר לכם:</p>
+                <p id="finalTime" class="text-6xl font-black text-yellow-400 tracking-wider">00:00</p>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Shared Matzah Keyboard with ENTER -->
+    <div id="keyboardContainer" class="shmura-matzah">
+        <div class="drag-handle"></div>
+        <div class="matzah-grid" dir="ltr">
+            <button class="matzah-btn" onclick="typeNum('1')">1</button>
+            <button class="matzah-btn" onclick="typeNum('2')">2</button>
+            <button class="matzah-btn" onclick="typeNum('3')">3</button>
+            <button class="matzah-btn" onclick="typeNum('4')">4</button>
+            <button class="matzah-btn" onclick="typeNum('5')">5</button>
+            <button class="matzah-btn" onclick="typeNum('6')">6</button>
+            <button class="matzah-btn" onclick="typeNum('7')">7</button>
+            <button class="matzah-btn" onclick="typeNum('8')">8</button>
+            <button class="matzah-btn" onclick="typeNum('9')">9</button>
+            <button class="matzah-btn action-btn" onclick="clearNum()">C</button>
+            <button class="matzah-btn" onclick="typeNum('0')">0</button>
+            <button class="matzah-btn action-btn" onclick="deleteNum()">⌫</button>
+            <!-- ENTER BUTTON -->
+            <button class="matzah-btn enter-btn mt-2" onclick="checkCurrentInput()">בדיקה ⏎</button>
+        </div>
+    </div>
+
+    <!-- Game Logic -->
+    <script>
+        // ==========================================
+        // מפתח התשובות
+        // ==========================================
+        const correctAnswers = {
+            'ans1_a': '01', 'ans1_b': '4', 'ans1_c': '4',
+            'trans1_ans': '0',
+            'ans2_a': '84', 'ans2_b': '4', 'ans2_c': '2',
+            'trans2_ans': '2',
+            'ans3_a': '16', 'ans3_b': '1', 'ans3_c': '20',
+            'trans3_ans': '2',
+            'ans4_a': '2', 'ans4_b': '0', 'ans4_c': '7'
+        };
+
+        const sectionsMapping = {
+            'room1': ['ans1_a', 'ans1_b', 'ans1_c'],
+            'trans1': ['trans1_ans'],
+            'room2': ['ans2_a', 'ans2_b', 'ans2_c'],
+            'trans2': ['trans2_ans'],
+            'room3': ['ans3_a', 'ans3_b', 'ans3_c'],
+            'trans3': ['trans3_ans'],
+            'room4': ['ans4_a', 'ans4_b', 'ans4_c']
+        };
+
+        const flow = ['intro', 'room1', 'trans1', 'room2', 'trans2', 'room3', 'trans3', 'room4', 'finish'];
+        let currentFlowIdx = 0;
+
+        let timeLeft = 45 * 60; // 45 דקות
+        let timerInterval;
+        let activeInputId = null;
+
+        const backgrounds = {
+            'intro': "url('https://images.unsplash.com/photo-1534438327276-14e5300c3a48?auto=format&fit=crop&w=1920&q=80')",
+            'room1': "url('https://images.unsplash.com/photo-1534438327276-14e5300c3a48?auto=format&fit=crop&w=1920&q=80')",
+            'trans1': "url('https://images.unsplash.com/photo-1507413245164-6160d8298b31?auto=format&fit=crop&w=1920&q=80')",
+            'room2': "url('https://images.unsplash.com/photo-1518837695005-2083093ee35b?auto=format&fit=crop&w=1920&q=80')",
+            'trans2': "url('https://images.unsplash.com/photo-1507413245164-6160d8298b31?auto=format&fit=crop&w=1920&q=80')",
+            'room3': "url('https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=1920&q=80')",
+            'trans3': "url('https://images.unsplash.com/photo-1507413245164-6160d8298b31?auto=format&fit=crop&w=1920&q=80')",
+            'room4': "url('https://images.unsplash.com/photo-1526304640581-d334cdbbf45e?auto=format&fit=crop&w=1920&q=80')",
+            'finish': "url('https://images.unsplash.com/photo-1519750783826-e2420f4d687f?auto=format&fit=crop&w=1920&q=80')" 
+        };
+
+        const displayTitles = {
+            'room1': 'הפירמידה: חדר 1/4',
+            'trans1': 'חידת העשרה 💡',
+            'room2': 'הפירמידה: חדר 2/4',
+            'trans2': 'חידת העשרה 💡',
+            'room3': 'הפירמידה: חדר 3/4',
+            'trans3': 'חידת העשרה 💡',
+            'room4': 'הפירמידה: חדר 4/4',
+            'finish': 'יצאתם לחירות!'
+        };
+
+        window.onload = function() {
+            document.getElementById('bg-layer').style.backgroundImage = backgrounds['intro'];
+        };
+
+        function startGame() {
+            document.getElementById('intro').classList.add('hidden');
+            document.getElementById('mainHeader').classList.remove('hidden');
+            document.getElementById('helperText').classList.remove('hidden');
+            
+            currentFlowIdx = 1;
+            const nextStageId = flow[currentFlowIdx];
+            document.getElementById(nextStageId).classList.remove('hidden');
+            document.getElementById('stageDisplay').textContent = displayTitles[nextStageId];
+            
+            setTimeout(() => setActiveInput('ans1_a'), 100);
+            
+            updateTimerDisplay();
+            timerInterval = setInterval(() => {
+                timeLeft--;
+                updateTimerDisplay();
+                if (timeLeft <= 0) {
+                    clearInterval(timerInterval);
+                    alert("הזמן נגמר! פרעה ניצח... תישארו עבדים לנצח!");
+                    location.reload();
+                }
+            }, 1000);
+
+            // מאזין למקלדת האמיתית (Enter ובמספרים)
+            document.addEventListener('keydown', handlePhysicalKeyboard);
+        }
+
+        function handlePhysicalKeyboard(e) {
+            if (!activeInputId) return;
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                checkCurrentInput();
+            } else if (e.key >= '0' && e.key <= '9') {
+                typeNum(e.key);
+            } else if (e.key === 'Backspace') {
+                deleteNum();
+            } else if (e.key.toLowerCase() === 'c') {
+                clearNum();
+            }
+        }
+
+        function setActiveInput(id, theme = null) {
+            document.querySelectorAll('.input-math').forEach(el => {
+                el.classList.remove('active-input', 'purple-theme');
+            });
+            activeInputId = id;
+            const activeEl = document.getElementById(id);
+            if(activeEl && !activeEl.classList.contains('input-correct')) {
+                activeEl.classList.add('active-input');
+                if(theme === 'purple') activeEl.classList.add('purple-theme');
+                positionKeyboard();
+            }
+        }
+
+        function positionKeyboard() {
+            const kb = document.getElementById('keyboardContainer');
+            if (kb.classList.contains('visible')) return; 
+            kb.classList.add('visible');
+            let kbLeft = (window.innerWidth - 260) / 2;
+            let kbTop = window.innerHeight - 340; // הועלה מעט כדי לפנות מקום לאנטר
+            kb.style.left = `${kbLeft}px`;
+            kb.style.top = `${kbTop}px`;
+        }
+
+        const kb = document.getElementById('keyboardContainer');
+        let isDragging = false;
+        let dragOffsetX, dragOffsetY;
+
+        function startDrag(e) {
+            if(e.target.classList.contains('matzah-btn')) return;
+            isDragging = true;
+            kb.style.animation = 'none'; 
+            let clientX = e.type.includes('touch') ? e.touches[0].clientX : e.clientX;
+            let clientY = e.type.includes('touch') ? e.touches[0].clientY : e.clientY;
+            const rect = kb.getBoundingClientRect();
+            dragOffsetX = clientX - rect.left;
+            dragOffsetY = clientY - rect.top;
+        }
+
+        function doDrag(e) {
+            if(!isDragging) return;
+            e.preventDefault(); 
+            let clientX = e.type.includes('touch') ? e.touches[0].clientX : e.clientX;
+            let clientY = e.type.includes('touch') ? e.touches[0].clientY : e.clientY;
+            kb.style.left = `${clientX - dragOffsetX}px`;
+            kb.style.top = `${clientY - dragOffsetY}px`;
+        }
+
+        function stopDrag() {
+            if(isDragging) {
+                isDragging = false;
+                kb.style.animation = 'float 6s ease-in-out infinite'; 
+            }
+        }
+
+        kb.addEventListener('mousedown', startDrag);
+        window.addEventListener('mousemove', doDrag);
+        window.addEventListener('mouseup', stopDrag);
+        kb.addEventListener('touchstart', startDrag, {passive: true});
+        window.addEventListener('touchmove', doDrag, {passive: false});
+        window.addEventListener('touchend', stopDrag);
+
+        function typeNum(num) {
+            if(!activeInputId) return;
+            const input = document.getElementById(activeInputId);
+            if(input && !input.classList.contains('input-correct') && input.value.length < 5) input.value += num;
+        }
+        function deleteNum() {
+            if(!activeInputId) return;
+            const input = document.getElementById(activeInputId);
+            if(input && !input.classList.contains('input-correct') && input.value.length > 0) input.value = input.value.slice(0, -1);
+        }
+        function clearNum() {
+            if(!activeInputId) return;
+            const input = document.getElementById(activeInputId);
+            if(input && !input.classList.contains('input-correct')) input.value = '';
+        }
+
+        function updateTimerDisplay() {
+            if(timeLeft < 0) return;
+            const m = Math.floor(timeLeft / 60).toString().padStart(2, '0');
+            const s = (timeLeft % 60).toString().padStart(2, '0');
+            document.getElementById('timerDisplay').textContent = `${m}:${s}`;
+            
+            const timerEl = document.getElementById('timerDisplay');
+            if (timeLeft < 300) { 
+                timerEl.classList.add('text-red-500');
+                timerEl.classList.remove('text-yellow-500');
+                if(s % 2 === 0) timerEl.classList.add('opacity-50');
+                else timerEl.classList.remove('opacity-50');
+            } else {
+                timerEl.classList.remove('text-red-500', 'opacity-50');
+                timerEl.classList.add('text-yellow-500');
+            }
+        }
+
+        // ==========================================
+        // בדיקת תשובה בודדת בזמן אמת ע"י לחיצה על ENTER
+        // ==========================================
+        function checkCurrentInput() {
+            if (!activeInputId) return;
+            
+            const el = document.getElementById(activeInputId);
+            if (el.classList.contains('input-correct')) return; // כבר נכון
+            if (el.value.trim() === '') {
+                showCustomToast("הקלידו תשובה קודם!", "bg-slate-800", "✏️");
+                return;
+            }
+
+            if(el.value.trim() === correctAnswers[activeInputId]) {
+                // תשובה נכונה!
+                el.classList.remove('active-input', 'input-wrong');
+                el.classList.add('input-correct');
+                el.onclick = null;
+                
+                // הסתרת הרמז אם היה פתוח
+                const hintEl = document.getElementById('hint_' + activeInputId);
+                if(hintEl) hintEl.classList.add('hidden');
+                
+                showCustomToast("תשובה נכונה! כל הכבוד", "bg-green-600/95", "✔️");
+                
+                // בדיקה אם כל החדר הושלם, או מעבר לתיבה הבאה
+                const currentStageId = flow[currentFlowIdx];
+                if(checkRoomCompletion(currentStageId)) {
+                    unlockRoomButton(currentStageId);
+                    showCustomToast("מעולה! השער נפתח!", "bg-green-600/95", "🔓");
+                } else {
+                    // פוקוס אוטומטי לתיבה הריקה הבאה בחדר
+                    focusNextEmptyInput(currentStageId);
+                }
+            } else {
+                // תשובה שגויה!
+                el.classList.add('shake', 'input-wrong');
+                setTimeout(() => {
+                    el.classList.remove('shake', 'input-wrong');
+                    el.value = ''; 
+                }, 800);
+                
+                timeLeft = Math.max(0, timeLeft - 60); // קנס דקה
+                updateTimerDisplay();
+                
+                // חשיפת הרמז הספציפי מתחת לתיבה
+                const hintEl = document.getElementById('hint_' + activeInputId);
+                if(hintEl && hintEl.classList.contains('hidden')) {
+                    hintEl.classList.remove('hidden');
+                    showCustomToast("טעות! קנס: דקה. רמז נפתח למטה", "bg-red-600/95", "❌");
+                } else {
+                    showCustomToast("טעות! נסו שוב (קנס: דקה)", "bg-red-600/95", "❌");
+                }
+            }
+        }
+
+        function checkRoomCompletion(roomId) {
+            const inputIds = sectionsMapping[roomId];
+            return inputIds.every(id => document.getElementById(id).classList.contains('input-correct'));
+        }
+
+        function unlockRoomButton(roomId) {
+            const btn = document.getElementById('btn_next_' + roomId);
+            if (btn) {
+                btn.classList.remove('btn-locked');
+                btn.innerHTML = roomId.includes('trans') ? 'המשך במסע 🔓' : 'פתח שער 🔓';
+                // מוסיף אנימציה קופצת
+                btn.classList.add('animate-bounce');
+                setTimeout(() => btn.classList.remove('animate-bounce'), 2000);
+            }
+        }
+
+        function focusNextEmptyInput(roomId) {
+            const inputIds = sectionsMapping[roomId];
+            const nextEmpty = inputIds.find(id => !document.getElementById(id).classList.contains('input-correct'));
+            if (nextEmpty) {
+                const theme = roomId.includes('trans') ? 'purple' : null;
+                setActiveInput(nextEmpty, theme);
+            }
+        }
+
+        function advanceFlow() {
+            const currentStageId = flow[currentFlowIdx];
+            
+            // וידוא אחרון שהכל פתור
+            if(!checkRoomCompletion(currentStageId)) {
+                showCustomToast("אנא פתרו את כל הסעיפים קודם!", "bg-red-600/95", "🔒");
+                return;
+            }
+
+            document.getElementById(currentStageId).classList.add('hidden');
+            document.getElementById(currentStageId).classList.remove('fade-in'); 
+            
+            currentFlowIdx++;
+            const nextStageId = flow[currentFlowIdx];
+            
+            document.getElementById('bg-layer').style.backgroundImage = backgrounds[nextStageId];
+            document.getElementById('stageDisplay').textContent = displayTitles[nextStageId];
+            
+            const nextStageEl = document.getElementById(nextStageId);
+            nextStageEl.classList.remove('hidden');
+            nextStageEl.classList.add('fade-in');
+            
+            setTimeout(() => {
+                focusNextEmptyInput(nextStageId);
+            }, 100);
+
+            if (nextStageId === 'finish') {
+                document.getElementById('keyboardContainer').classList.remove('visible');
+                document.getElementById('keyboardContainer').classList.add('hidden');
+                document.getElementById('helperText').classList.add('hidden');
+                clearInterval(timerInterval);
+                const m = Math.floor(timeLeft / 60).toString().padStart(2, '0');
+                const s = (timeLeft % 60).toString().padStart(2, '0');
+                document.getElementById('finalTime').textContent = `${m}:${s}`;
+                document.removeEventListener('keydown', handlePhysicalKeyboard);
+            }
+        }
+
+        function showCustomToast(text, bgClass, icon) {
+            const toast = document.getElementById('toastAlert');
+            const toastText = document.getElementById('toastText');
+            const toastIcon = document.getElementById('toastIcon');
+            
+            toast.className = `absolute top-6 left-1/2 transform -translate-x-1/2 text-white px-6 py-3 rounded-full font-bold shadow-2xl opacity-0 transition-opacity duration-300 pointer-events-none z-50 border border-white/20 flex items-center gap-2 ${bgClass}`;
+            toastText.textContent = text;
+            toastIcon.textContent = icon;
+            
+            toast.style.opacity = '1';
+            toast.style.transform = 'translate(-50%, 20px)';
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transform = 'translate(-50%, 0)';
+            }, 3000);
+        }
+    </script>
+</body>
+</html>
